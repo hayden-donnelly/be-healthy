@@ -1,4 +1,4 @@
-# bhealthy
+# be-healthy
 A program for tracking and visualizing health data.
 
 ## Getting Started
