@@ -8,7 +8,7 @@ use crossterm::{
 };
 use ratatui::{
     prelude::{CrosstermBackend, Stylize, Terminal},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     layout::{Constraint, Direction, Layout},
 };
 use std::io::{stdout, Result};
@@ -18,6 +18,11 @@ fn main() -> Result<()> {
     enable_raw_mode()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
+
+    let options = vec!["Record Weight", "Record Blood Pressure", "Quit"];
+    let mut selected_option = 0;
+    let mut list_state = ListState::default();
+    list_state.select(Some(selected_option));
 
     loop {
         terminal.draw(|frame| {
@@ -41,14 +46,18 @@ fn main() -> Result<()> {
                 .block(Block::default().borders(Borders::ALL).title("Welcome"));
             frame.render_widget(welcome_text, chunks[0]);
 
-            let options_text = Paragraph::new(
-                "Please select an option:\n\n1. Record Weight\n2. Record Blood Pressure\n3. Quit",
+            let options_list = List::new(
+                options
+                    .iter()
+                    .map(|option| ListItem::new(option.to_string()))
+                    .collect::<Vec<ListItem>>(),
             )
-            .alignment(ratatui::layout::Alignment::Left)
-            .block(Block::default().borders(Borders::ALL).title("Options"));
-            frame.render_widget(options_text, chunks[1]);
+            .block(Block::default().borders(Borders::ALL).title("Options"))
+            .highlight_style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow))
+            .highlight_symbol("> ");
+            frame.render_stateful_widget(options_list, chunks[1], &mut list_state);
 
-            let instruction_text = Paragraph::new("Press the corresponding number key to select an option.")
+            let instruction_text = Paragraph::new("Use 'j' and 'k' to navigate, 'Enter' to select.")
                 .style(ratatui::style::Style::default().fg(ratatui::style::Color::Gray))
                 .alignment(ratatui::layout::Alignment::Center);
             frame.render_widget(instruction_text, chunks[2]);
@@ -57,16 +66,33 @@ fn main() -> Result<()> {
         if event::poll(std::time::Duration::from_millis(16))? {
             if let event::Event::Key(key) = event::read()? {
                 match key.code {
-                    KeyCode::Char('1') => {
-                        // TODO: Implement weight recording functionality
-                        break;
+                    KeyCode::Char('j') => {
+                        if selected_option < options.len() - 1 {
+                            selected_option += 1;
+                            list_state.select(Some(selected_option));
+                        }
                     }
-                    KeyCode::Char('2') => {
-                        // TODO: Implement blood pressure recording functionality
-                        break;
+                    KeyCode::Char('k') => {
+                        if selected_option > 0 {
+                            selected_option -= 1;
+                            list_state.select(Some(selected_option));
+                        }
                     }
-                    KeyCode::Char('3') => {
-                        break;
+                    KeyCode::Enter => {
+                        match selected_option {
+                            0 => {
+                                // TODO: Implement weight recording functionality
+                                break;
+                            }
+                            1 => {
+                                // TODO: Implement blood pressure recording functionality
+                                break;
+                            }
+                            2 => {
+                                break;
+                            }
+                            _ => {}
+                        }
                     }
                     _ => {}
                 }
