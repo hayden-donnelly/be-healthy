@@ -10,6 +10,7 @@ use ratatui::{
     prelude::{CrosstermBackend, Stylize, Terminal},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     layout::{Constraint, Direction, Layout},
+    Frame
 };
 use std::io::{stdout, Result};
 
@@ -17,6 +18,48 @@ enum Page {
     Main,
     WeightRecording,
     BloodPressureRecording,
+}
+
+fn render_main_page(frame: &mut Frame, selected_option: usize) {
+    let options = vec!["Record Weight", "Record Blood Pressure", "Quit"];
+    let mut list_state = ListState::default();
+    list_state.select(Some(selected_option));
+
+    let area = frame.size();
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(1)
+        .constraints(
+            [
+                Constraint::Percentage(20),
+                Constraint::Percentage(60),
+                Constraint::Percentage(20),
+            ]
+            .as_ref(),
+        )
+        .split(area);
+
+    let welcome_text = Paragraph::new("Welcome to Health Tracker!")
+        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow))
+        .alignment(ratatui::layout::Alignment::Center)
+        .block(Block::default().borders(Borders::ALL).title("Welcome"));
+    frame.render_widget(welcome_text, chunks[0]);
+
+    let options_list = List::new(
+        options
+            .iter()
+            .map(|option| ListItem::new(option.to_string()))
+            .collect::<Vec<ListItem>>(),
+    )
+    .block(Block::default().borders(Borders::ALL).title("Options"))
+    .highlight_style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow))
+    .highlight_symbol("> ");
+    frame.render_stateful_widget(options_list, chunks[1], &mut list_state);
+
+    let instruction_text = Paragraph::new("Use 'j' and 'k' to navigate, 'Enter' to select.")
+        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Gray))
+        .alignment(ratatui::layout::Alignment::Center);
+    frame.render_widget(instruction_text, chunks[2]);
 }
 
 fn main() -> Result<()> {
@@ -27,8 +70,6 @@ fn main() -> Result<()> {
 
     let options = vec!["Record Weight", "Record Blood Pressure", "Quit"];
     let mut selected_option = 0;
-    let mut list_state = ListState::default();
-    list_state.select(Some(selected_option));
 
     let mut current_page = Page::Main;
 
@@ -36,41 +77,7 @@ fn main() -> Result<()> {
         terminal.draw(|frame| {
             match current_page {
                 Page::Main => {
-                    let area = frame.size();
-                    let chunks = Layout::default()
-                        .direction(Direction::Vertical)
-                        .margin(1)
-                        .constraints(
-                            [
-                                Constraint::Percentage(20),
-                                Constraint::Percentage(60),
-                                Constraint::Percentage(20),
-                            ]
-                            .as_ref(),
-                        )
-                        .split(area);
-
-                    let welcome_text = Paragraph::new("Welcome to Health Tracker!")
-                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow))
-                        .alignment(ratatui::layout::Alignment::Center)
-                        .block(Block::default().borders(Borders::ALL).title("Welcome"));
-                    frame.render_widget(welcome_text, chunks[0]);
-
-                    let options_list = List::new(
-                        options
-                            .iter()
-                            .map(|option| ListItem::new(option.to_string()))
-                            .collect::<Vec<ListItem>>(),
-                    )
-                    .block(Block::default().borders(Borders::ALL).title("Options"))
-                    .highlight_style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow))
-                    .highlight_symbol("> ");
-                    frame.render_stateful_widget(options_list, chunks[1], &mut list_state);
-
-                    let instruction_text = Paragraph::new("Use 'j' and 'k' to navigate, 'Enter' to select.")
-                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Gray))
-                        .alignment(ratatui::layout::Alignment::Center);
-                    frame.render_widget(instruction_text, chunks[2]);
+                    render_main_page(frame, selected_option);
                 }
                 Page::WeightRecording => {
                     let area = frame.size();
@@ -101,13 +108,11 @@ fn main() -> Result<()> {
                             KeyCode::Char('j') => {
                                 if selected_option < options.len() - 1 {
                                     selected_option += 1;
-                                    list_state.select(Some(selected_option));
                                 }
                             }
                             KeyCode::Char('k') => {
                                 if selected_option > 0 {
                                     selected_option -= 1;
-                                    list_state.select(Some(selected_option));
                                 }
                             }
                             KeyCode::Enter => {
