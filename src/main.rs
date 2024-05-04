@@ -1,5 +1,5 @@
 use crossterm::{
-    event::{self, KeyCode, KeyEventKind},
+    event::{self, KeyCode, KeyEvent, KeyEventKind},
     terminal::{
         disable_raw_mode, enable_raw_mode, EnterAlternateScreen,
         LeaveAlternateScreen,
@@ -88,7 +88,7 @@ fn render_weight_recording_page(frame: &mut Frame) {
     frame.render_widget(instruction_text, chunks[1]);
 }
 
-fn render_blood_pressure_recording_page(frame: &mut Frame) {
+fn render_blood_pressure_recording_page(frame: &mut Frame, systolic: &str, diastolic: &str) {
     let area = frame.size();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -102,16 +102,39 @@ fn render_blood_pressure_recording_page(frame: &mut Frame) {
         )
         .split(area);
 
-    let text = Paragraph::new("This is the blood pressure recording page.")
+    let text = Paragraph::new(format!("Systolic: {}\nDiastolic: {}", systolic, diastolic))
         .style(ratatui::style::Style::default().fg(ratatui::style::Color::White))
         .alignment(ratatui::layout::Alignment::Center)
         .block(Block::default().title("Record Blood Pressure").borders(Borders::ALL));
     frame.render_widget(text, chunks[0]);
     
-    let instruction_text = Paragraph::new("Press 'Esc' to go back.")
+    let instruction_text = Paragraph::new("Enter systolic and diastolic values, then press 'Enter' to save. Press 'Esc' to go back.")
         .style(ratatui::style::Style::default().fg(ratatui::style::Color::Gray))
         .alignment(ratatui::layout::Alignment::Center);
     frame.render_widget(instruction_text, chunks[1]);
+}
+
+fn handle_blood_pressure_input(key: KeyEvent, systolic: &mut String, diastolic: &mut String, input_mode: &mut bool) {
+    match key.code {
+        KeyCode::Char(c) => {
+            if *input_mode {
+                systolic.push(c);
+            } else {
+                diastolic.push(c);
+            }
+        }
+        KeyCode::Backspace => {
+            if *input_mode {
+                systolic.pop();
+            } else {
+                diastolic.pop();
+            }
+        }
+        KeyCode::Enter => {
+            *input_mode = !*input_mode;
+        }
+        _ => {}
+    }
 }
 
 fn main() -> Result<()> {
@@ -124,13 +147,16 @@ fn main() -> Result<()> {
     let mut selected_option = 0;
 
     let mut current_page = Page::Main;
+    let mut systolic = String::new();
+    let mut diastolic = String::new();
+    let mut input_mode = true; // true for systolic, false for diastolic
 
     loop {
         terminal.draw(|frame| {
             match current_page {
                 Page::Main => render_main_page(frame, selected_option),
                 Page::WeightRecording => render_weight_recording_page(frame),
-                Page::BloodPressureRecording => render_blood_pressure_recording_page(frame),
+                Page::BloodPressureRecording => render_blood_pressure_recording_page(frame, &systolic, &diastolic),
             }
         })?;
 
@@ -166,12 +192,23 @@ fn main() -> Result<()> {
                             _ => {}
                         }
                     }
-                    Page::WeightRecording | Page::BloodPressureRecording => {
+                    Page::WeightRecording => {
                         match key.code {
                             KeyCode::Esc => {
                                 current_page = Page::Main;
                             }
                             _ => {}
+                        }
+                    }
+                    Page::BloodPressureRecording => {
+                        match key.code {
+                            KeyCode::Esc => {
+                                current_page = Page::Main;
+                                systolic.clear();
+                                diastolic.clear();
+                                input_mode = true;
+                            }
+                            _ => handle_blood_pressure_input(key, &mut systolic, &mut diastolic, &mut input_mode),
                         }
                     }
                 }
